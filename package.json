@@ -1,0 +1,43 @@
+{
+  "name": "household-budget",
+  "productName": "Household Budget",
+  "version": "1.0.1",
+  "description": "Shared household budget for Cameron and Amber",
+  "main": "main.js",
+  "author": "Wharton Household",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --x64"
+  },
+  "build": {
+    "appId": "com.wharton.householdbudget",
+    "productName": "Household Budget",
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*",
+      "!app/test.html",
+      "node_modules/@supabase/supabase-js/dist/umd/supabase.js",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Household Budget"
+    },
+    "publish": null
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}
