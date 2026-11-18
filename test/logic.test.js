@@ -1,5 +1,5 @@
 const L = require("../app/logic.js");
-const py = require("/home/claude/sched.json");
+const py = require("./fixtures/sheet-2026-11-17.json");
 const settings = { paycheck: 3020, first_payday: "2026-11-20", starting_balance: 0, horizon_months: 14 };
 let id = 1;
 const B = (name, kind, category, amount, due_day, extra = {}) => ({ id: id++, name, kind, category, amount, due_day, active: true, ...extra });

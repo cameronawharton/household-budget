@@ -32,7 +32,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Tests
+        shell: bash
         run: |
+          set -e
           node test/logic.test.js
           node test/updater.test.js
       - name: Build installer
