@@ -1,4 +1,4 @@
-name: Build Windows installer
+name: Build and publish Windows installer
 
 on:
   workflow_dispatch:
@@ -11,7 +11,15 @@ on:
       - "updater.js"
       - "package.json"
       - "package-lock.json"
+      - "release-notes.txt"
       - ".github/workflows/build-windows.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-windows
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -29,11 +37,33 @@ jobs:
           node test/updater.test.js
       - name: Build installer
         run: npx electron-builder --win nsis --x64 --publish never
-      - name: Checksum
+      - name: Publish installer if the version is new
         shell: pwsh
-        run: Get-ChildItem dist/*.exe | Get-FileHash -Algorithm SHA256 | Format-List
-      - uses: actions/upload-artifact@v4
-        with:
-          name: installer
-          path: dist/*.exe
-          retention-days: 30
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $published = ""
+          if (Test-Path latest.json) { $published = (Get-Content latest.json -Raw | ConvertFrom-Json).version }
+          if ($version -eq $published) { Write-Host "Version $version is already published. Nothing to do."; exit 0 }
+          $built = "dist/Household Budget Setup $version.exe"
+          if (-not (Test-Path $built)) { throw "Installer not found: $built" }
+          New-Item -ItemType Directory -Force download | Out-Null
+          Get-ChildItem download/*.exe -ErrorAction SilentlyContinue | Remove-Item
+          $versioned = "download/Household-Budget-Setup-$version.exe"
+          Copy-Item $built $versioned
+          Copy-Item $built "download/Household-Budget-Setup.exe"
+          $sha = (Get-FileHash $versioned -Algorithm SHA256).Hash.ToLower()
+          $notes = ""
+          if (Test-Path release-notes.txt) { $notes = (Get-Content release-notes.txt -Raw).Trim() }
+          $info = [ordered]@{
+            version = $version
+            url = "https://github.com/${{ github.repository }}/raw/main/$versioned"
+            sha256 = $sha
+            notes = $notes
+          }
+          $info | ConvertTo-Json | Set-Content -Encoding utf8NoBOM latest.json
+          Get-Content latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add download latest.json
+          git commit -m "Publish installer $version [skip ci]"
+          git push

@@ -4,7 +4,7 @@ A shared Windows desktop budget app for the Wharton household. Pay periods, bill
 
 ## Install
 
-Download [Household-Budget-Setup-1.0.1.exe](https://github.com/cameronawharton/household-budget/raw/main/download/Household-Budget-Setup-1.0.1.exe), run it, and sign in.
+Download the [latest installer](https://github.com/cameronawharton/household-budget/raw/main/download/Household-Budget-Setup.exe), run it, and sign in.
 
 Windows may show "Windows protected your PC" because the app isn't code-signed. Click **More info**, then **Run anyway**.
 

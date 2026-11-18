@@ -1,0 +1,1 @@
+Adds automatic update notices. From now on, new versions install from a button inside the app.
