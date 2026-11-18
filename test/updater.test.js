@@ -9,3 +9,4 @@ ok(!u.validInfo({ ...good, url: "https://github.com/someoneelse/household-budget
 ok(!u.validInfo({ ...good, sha256: "nothex" }), "rejects bad hash");
 ok(!u.validInfo({ ...good, version: "1.0" }), "rejects bad version");
 console.log(fail ? fail + " FAILED" : "ALL PASS");
+process.exitCode = fail ? 1 : 0;

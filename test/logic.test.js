@@ -53,3 +53,4 @@ const feb = L.generateSchedule({ settings, bills: [B("Test", "monthly", "X", 1, 
 ok(feb.some((r) => r.date === "2027-02-28" && r.item === "Test"), "clamp 31st to Feb 28");
 
 console.log(fail ? `${fail} FAILED` : "ALL PASS");
+process.exitCode = fail ? 1 : 0;
