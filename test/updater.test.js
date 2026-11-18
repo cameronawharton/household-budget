@@ -1,0 +1,11 @@
+const u = require("../updater.js");
+let fail = 0; const ok = (c, m) => { if (!c) { fail++; console.log("FAIL", m); } };
+ok(u.compareVersions("1.0.2", "1.0.1") === 1, "newer"); ok(u.compareVersions("1.0.1", "1.0.1") === 0, "same");
+ok(u.compareVersions("1.0.10", "1.0.9") === 1, "numeric not text"); ok(u.compareVersions("1.0.1", "1.1.0") === -1, "older");
+const good = { version: "1.0.2", url: "https://github.com/cameronawharton/household-budget/raw/main/download/x.exe", sha256: "a".repeat(64) };
+ok(u.validInfo(good), "valid");
+ok(!u.validInfo({ ...good, url: "https://evil.example.com/x.exe" }), "rejects other sites");
+ok(!u.validInfo({ ...good, url: "https://github.com/someoneelse/household-budget/raw/main/x.exe" }), "rejects other repos");
+ok(!u.validInfo({ ...good, sha256: "nothex" }), "rejects bad hash");
+ok(!u.validInfo({ ...good, version: "1.0" }), "rejects bad version");
+console.log(fail ? fail + " FAILED" : "ALL PASS");

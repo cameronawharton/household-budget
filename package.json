@@ -1,7 +1,7 @@
 {
   "name": "household-budget",
   "productName": "Household Budget",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Shared household budget for Cameron and Amber",
   "main": "main.js",
   "author": "Wharton Household",
@@ -16,6 +16,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "updater.js",
       "app/**/*",
       "!app/test.html",
       "node_modules/@supabase/supabase-js/dist/umd/supabase.js",

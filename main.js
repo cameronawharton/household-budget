@@ -1,5 +1,24 @@
-const { app, BrowserWindow, shell, Menu } = require("electron");
+const { app, BrowserWindow, shell, Menu, ipcMain, net } = require("electron");
 const path = require("path");
+const updater = require("./updater");
+const APP_VERSION = require("./package.json").version;
+
+// ---- version and updates (called from the window through preload.js) ----
+ipcMain.handle("app:version", () => APP_VERSION);
+ipcMain.handle("update:check", () => updater.check((u, o) => net.fetch(u, o), APP_VERSION));
+ipcMain.handle("update:install", async (e, info) => {
+  try {
+    const file = await updater.download((u, o) => net.fetch(u, o), info, (pct) => {
+      if (!e.sender.isDestroyed()) e.sender.send("update:progress", pct);
+    });
+    if (process.env.HB_UPDATE_DRYRUN) return { ok: true, file };
+    updater.launchInstaller(file);
+    setTimeout(() => app.quit(), 800);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();

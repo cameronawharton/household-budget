@@ -1,0 +1,39 @@
+name: Build Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "main.js"
+      - "preload.js"
+      - "updater.js"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/build-windows.yml"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tests
+        run: |
+          node test/logic.test.js
+          node test/updater.test.js
+      - name: Build installer
+        run: npx electron-builder --win nsis --x64 --publish never
+      - name: Checksum
+        shell: pwsh
+        run: Get-ChildItem dist/*.exe | Get-FileHash -Algorithm SHA256 | Format-List
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer
+          path: dist/*.exe
+          retention-days: 30

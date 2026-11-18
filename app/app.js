@@ -22,6 +22,7 @@
     settings: null, bills: [], schedule: [], transactions: [],
     view: "dashboard", schedMonth: null, schedFilter: "all", txMonth: null, openPeriod: null,
     billsDirty: false, pendingRender: false, busy: false,
+    version: "", update: null, updatePct: null, updateErr: null,
   };
 
   // ---------------------------------------------------------------- helpers
@@ -50,6 +51,7 @@
 
   // ---------------------------------------------------------------- boot / auth
   async function boot() {
+    try { S.version = window.appInfo?.getVersion ? await window.appInfo.getVersion() : ""; } catch (_) { S.version = ""; }
     if (!LS.url || !LS.key) return renderSetup();
     try {
       S.sb = window.supabase.createClient(LS.url, LS.key, { auth: { persistSession: true, autoRefreshToken: true } });
@@ -118,6 +120,8 @@
     if (!S.schedule.length) await initialGenerate();
     subscribe();
     render();
+    checkForUpdate(false);
+    clearInterval(S.updateTimer); S.updateTimer = setInterval(() => checkForUpdate(false), 6 * 60 * 60 * 1000);
   }
 
   function teardown() {
@@ -221,7 +225,7 @@
           <nav class="nav">${NAV.map(([k, label, ico]) => `<button class="${S.view === k ? "active" : ""}" data-act="nav" data-view="${k}"><span class="ico">${ico}</span>${label}</button>`).join("")}</nav>
           <div class="foot" id="foot"></div>
         </aside>
-        <main class="main">${view()}</main>
+        <main class="main">${updateBanner()}${view()}</main>
       </div>`;
     renderFoot();
     const m = root.querySelector(".main"); if (m) m.scrollTop = scroll;
@@ -230,7 +234,7 @@
     const f = document.getElementById("foot");
     if (!f) return;
     f.innerHTML = `<div class="live"><span class="dot ${S.live ? "on" : ""}"></span>${S.live ? "Live: changes sync" : "Connecting..."}</div>
-      <div style="margin-top:6px">Signed in as ${esc(LS.me)}</div><div class="muted" style="color:#7f93a5">v${esc(window.appInfo?.version || "1.0.0")}</div>`;
+      <div style="margin-top:6px">Signed in as ${esc(LS.me)}</div><div class="muted" style="color:#7f93a5">v${esc(S.version || "")}</div>`;
   }
   const head = (title, sub, right = "") => `<div class="page-head"><div><h1>${title}</h1>${sub ? `<div class="sub">${sub}</div>` : ""}</div><div class="row">${right}</div></div>`;
 
@@ -449,10 +453,47 @@
           <div class="form-grid">
             <label>Who uses it</label><select data-change="me">${PEOPLE.map((p) => `<option ${p === LS.me ? "selected" : ""}>${p}</option>`).join("")}</select>
             <label>Signed in as</label><div>${esc(S.session?.user?.email || "")}</div>
+            <label>App version</label><div class="row"><span>${esc(S.version || "unknown")}</span><button class="btn small" data-act="check-update" ${S.updatePct !== null ? "disabled" : ""}>Check for updates</button></div>
             <label>Database</label><div class="small muted" style="word-break:break-all">${esc(LS.url)}</div>
             <span></span><div class="row"><button class="btn" data-act="sign-out">Sign out</button><button class="btn danger" data-act="change-connection">Change connection</button></div>
           </div></div>
       </div>`;
+  }
+
+  // ---------------------------------------------------------------- updates
+  async function checkForUpdate(manual) {
+    if (!window.updater) { if (manual) toast("Updates can only be checked in the installed app", true); return; }
+    const r = await window.updater.check();
+    S.update = r;
+    if (manual) {
+      if (r.error) toast("Couldn't check for updates: " + r.error, true);
+      else if (!r.available) toast(`You're on the latest version (${r.current})`);
+      S.updateDismissed = null;
+    }
+    if (S.settings) safeRender();
+  }
+  async function installUpdate() {
+    const info = S.update && S.update.info;
+    if (!info || S.updatePct !== null) return;
+    S.updatePct = 0; S.updateErr = null; render();
+    const off = window.updater.onProgress((pct) => {
+      S.updatePct = pct;
+      const el = document.getElementById("upd-pct"); if (el) el.textContent = pct + "%";
+      const bar = document.getElementById("upd-bar"); if (bar) bar.style.width = pct + "%";
+    });
+    const r = await window.updater.install(info);
+    off();
+    if (r.ok) { S.updatePct = 100; S.updateDone = true; render(); }
+    else { S.updatePct = null; S.updateErr = r.error; render(); }
+  }
+  function updateBanner() {
+    const u = S.update;
+    if (S.updateErr) return `<div class="banner"><span>The update didn't install: ${esc(S.updateErr)}</span><button class="btn small" data-act="install-update">Try again</button></div>`;
+    if (!u || !u.available || S.updateDismissed === u.latest) return "";
+    if (S.updateDone) return `<div class="banner update"><span>Update downloaded. The installer is opening and this window will close. Click through the installer, then open Household Budget again.</span></div>`;
+    if (S.updatePct !== null) return `<div class="banner update"><span>Downloading version ${esc(u.latest)}... <b id="upd-pct">${S.updatePct}%</b></span><div class="bar" style="width:220px;margin:0"><span id="upd-bar" style="width:${S.updatePct}%"></span></div></div>`;
+    return `<div class="banner update"><span>Version ${esc(u.latest)} is available${u.notes ? ": " + esc(u.notes) : "."}</span>
+      <span class="row"><button class="btn small primary" data-act="install-update">Install update</button><button class="btn small link" data-act="dismiss-update">Later</button></span></div>`;
   }
 
   // ---------------------------------------------------------------- events
@@ -469,6 +510,9 @@
       localStorage.removeItem("hb.url"); localStorage.removeItem("hb.key"); localStorage.setItem("hb.custom", "1"); location.reload();
     }
     else if (act === "rebuild") { rebuildSchedule(); }
+    else if (act === "check-update") { checkForUpdate(true); }
+    else if (act === "install-update") { installUpdate(); }
+    else if (act === "dismiss-update") { S.updateDismissed = S.update?.latest; render(); }
     else if (act === "toggle-period") { S.openPeriod = S.openPeriod === el.dataset.payday ? null : el.dataset.payday; render(); }
     else if (act === "month") {
       const k = el.dataset.key === "sched" ? "schedMonth" : "txMonth"; const step = Number(el.dataset.step);
