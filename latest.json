@@ -1,0 +1,6 @@
+{
+  "version": "1.0.2",
+  "url": "https://github.com/cameronawharton/household-budget/raw/main/download/Household-Budget-Setup-1.0.2.exe",
+  "sha256": "9ffa9313b0a4ed3a6971cd839d8db1d78c4d4fbfaf8c48ae2fc7d0b90e10ba96",
+  "notes": "Adds automatic update notices. From now on, new versions install from a button inside the app."
+}
